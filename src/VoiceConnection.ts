@@ -158,7 +158,10 @@ export type VoiceConnectionEvents = {
 	debug: (message: string) => Awaited<void>;
 	stateChange: (oldState: VoiceConnectionState, newState: VoiceConnectionState) => Awaited<void>;
 } & {
-	[status in VoiceConnectionStatus]: (oldState: VoiceConnectionState, newState: VoiceConnectionState) => Awaited<void>;
+	[status in VoiceConnectionStatus]: (
+		oldState: VoiceConnectionState,
+		newState: VoiceConnectionState & { status: status },
+	) => Awaited<void>;
 };
 
 /**
@@ -286,7 +289,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 
 		this.emit('stateChange', oldState, newState);
 		if (oldState.status !== newState.status) {
-			this.emit(newState.status, oldState, newState);
+			this.emit(newState.status, oldState, newState as any);
 		}
 	}
 
@@ -531,6 +534,7 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 		) {
 			return false;
 		}
+		this.joinConfig.channelId = null;
 		if (!this.state.adapter.sendPayload(createJoinVoiceChannelPayload(this.joinConfig))) {
 			this.state = {
 				adapter: this.state.adapter,
@@ -563,13 +567,17 @@ export class VoiceConnection extends TypedEmitter<VoiceConnectionEvents> {
 			return false;
 		}
 
-		this.rejoinAttempts++;
+		const notReady = this.state.status !== VoiceConnectionStatus.Ready;
+
+		if (notReady) this.rejoinAttempts++;
 		Object.assign(this.joinConfig, joinConfig);
 		if (this.state.adapter.sendPayload(createJoinVoiceChannelPayload(this.joinConfig))) {
-			this.state = {
-				...this.state,
-				status: VoiceConnectionStatus.Signalling,
-			};
+			if (notReady) {
+				this.state = {
+					...this.state,
+					status: VoiceConnectionStatus.Signalling,
+				};
+			}
 			return true;
 		}
 
