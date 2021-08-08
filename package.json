@@ -15,6 +15,7 @@
 		"lint": "eslint src --ext .ts",
 		"lint:fix": "eslint src --ext .ts --fix",
 		"prettier": "prettier --write **/*.{ts,js,json,yml,yaml}",
+		"prepare": "tsc",
 		"build": "tsc",
 		"build:check": "tsc --noEmit --incremental false",
 		"docs": "typedoc src/index.ts",
